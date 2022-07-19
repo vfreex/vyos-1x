@@ -1,0 +1,21 @@
+[Unit]
+Description=DHCPv6 client (stateless mode) on %i
+Documentation=man:dhclient(8)
+ConditionPathExists=/var/lib/dhcp/dhclient6_%i.conf
+ConditionPathExists=/var/lib/dhcp/dhclient6_%i.options
+After=vyos-router.service
+
+[Service]
+WorkingDirectory=/var/lib/dhcp
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=-/var/lib/dhcp/dhclient6_%i.options
+PIDFile=/var/lib/dhcp/dhclient6_%i.pid
+ExecStart=/sbin/dhclient -6 $DHCLIENT_OPTS
+ExecStop=/bin/sh -c 'interface=%i reason=RELEASE6 /usr/sbin/dhclient-script; /usr/bin/test $? -eq 2'
+TimeoutStopSec=20
+SendSIGKILL=true
+FinalKillSignal=SIGABRT
+
+[Install]
+WantedBy=multi-user.target

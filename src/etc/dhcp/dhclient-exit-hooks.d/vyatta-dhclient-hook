@@ -23,7 +23,7 @@
 RUN="yes"
 
 proto=""
-if [[ $reason =~ (REBOOT6|INIT6|EXPIRE6|RELEASE6|STOP6|INFORM6|BOUND6|REBIND6|DELEGATED6) ]]; then
+if [[ $reason =~ ^(REBOOT6|INIT6|EXPIRE6|RELEASE6|STOP6|INFORM6|BOUND6|REBIND6|DELEGATED6)$ ]]; then
         proto="v6"
 fi
 

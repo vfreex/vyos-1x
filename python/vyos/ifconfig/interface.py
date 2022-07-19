@@ -1285,20 +1285,44 @@ class Interface(Control):
             raise ValueError()
 
         ifname = self.ifname
-        config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
-        systemd_service = f'dhcp6c@{ifname}.service'
+        config_base = '/var/lib/dhcp/dhclient6'
+        config_file = f'{config_base}_{ ifname }.conf'
+        options_file = f'{config_base}_{ ifname }.options'
+        pid_file = f'{config_base}_{ifname}.pid'
+        lease_file = f'{config_base}_{ ifname }.leases'
+        systemd_service = f'dhclient6@{ifname}.service'
+        systemd_service_stateless = f'dhclient6-stateless@{ifname}.service'
 
         if enable and 'disable' not in self._config:
+            # whether dhclient should operate in stateless mode
+            stateless_mode = dict_search('dhcpv6_options.parameters_only', self._config) is not None and \
+                not dict_search('dhcpv6_options.pd', self._config)
+
+            if stateless_mode:
+                # dhclient should operate in stateless mode
+                if is_systemd_service_active(systemd_service):
+                    self._cmd(f'systemctl stop {systemd_service}')
+            else:
+                if is_systemd_service_active(systemd_service_stateless):
+                    self._cmd(f'systemctl stop {systemd_service_stateless}')
+
+            render(options_file, 'dhcp-client/daemon-options6.j2', self._config)
             render(config_file, 'dhcp-client/ipv6.j2', self._config)
 
-            # We must ignore any return codes. This is required to enable
-            # DHCPv6-PD for interfaces which are yet not up and running.
-            return self._popen(f'systemctl restart {systemd_service}')
+            if stateless_mode:
+                self._cmd(f'systemctl restart {systemd_service_stateless}')
+            else:
+                self._cmd(f'systemctl restart {systemd_service}')
         else:
             if is_systemd_service_active(systemd_service):
                 self._cmd(f'systemctl stop {systemd_service}')
+            if is_systemd_service_active(systemd_service_stateless):
+                self._cmd(f'systemctl stop {systemd_service_stateless}')
             if os.path.isfile(config_file):
                 os.remove(config_file)
+            for file in [config_file, options_file, pid_file, lease_file]:
+                if os.path.isfile(file):
+                    os.remove(file)
 
     def set_mirror_redirect(self):
         # Please refer to the document for details
