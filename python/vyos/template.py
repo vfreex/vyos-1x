@@ -569,8 +569,6 @@ def snmp_auth_oid(type):
 
 @register_filter('nft_action')
 def nft_action(vyos_action):
-    if vyos_action == 'accept':
-        return 'return'
     return vyos_action
 
 @register_filter('nft_rule')
